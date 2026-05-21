@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Универсальная форма расчёта буровзрывных работ (БВР)</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root{
+  --blue:#1d4e89; --blue-d:#143a66; --acc:#e8801a; --bg:#f4f6f9;
+  --line:#d4dae3; --ok:#1d8a4c; --txt:#1f2937; --muted:#64748b;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg);color:var(--txt);font-size:14px;line-height:1.45}
+h1,h2,h3{font-weight:600}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px 60px}
+
+/* ШАПКА */
+header{background:linear-gradient(135deg,var(--blue),var(--blue-d));color:#fff;padding:18px 0;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+header .wrap{padding-bottom:0}
+header h1{font-size:20px;display:flex;align-items:center;gap:10px}
+header .sub{font-size:12.5px;opacity:.85;margin-top:3px}
+.logo{width:34px;height:34px;background:var(--acc);border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px}
+
+/* ШАГИ */
+.steps{display:flex;flex-wrap:wrap;gap:6px;margin:18px 0 14px}
+.step{flex:1;min-width:130px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:9px 11px;cursor:pointer;transition:.15s;display:flex;gap:9px;align-items:center}
+.step:hover{border-color:var(--blue)}
+.step.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.step.done .num{background:var(--ok);color:#fff}
+.step .num{width:24px;height:24px;border-radius:50%;background:#e2e8f0;color:var(--muted);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0}
+.step.active .num{background:#fff;color:var(--blue)}
+.step .lbl{font-size:12px;font-weight:600}
+
+/* ПАНЕЛИ */
+.panel{display:none;background:#fff;border:1px solid var(--line);border-radius:10px;padding:22px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.panel.active{display:block}
+.panel h2{font-size:17px;color:var(--blue);margin-bottom:4px}
+.panel .desc{color:var(--muted);font-size:12.5px;margin-bottom:18px}
+
+/* СЕКЦИИ ФОРМЫ */
+fieldset{border:1px solid var(--line);border-radius:8px;padding:14px 16px 16px;margin-bottom:16px}
+legend{font-weight:600;color:var(--blue);padding:0 8px;font-size:13.5px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px 18px}
+.fld{display:flex;flex-direction:column;gap:3px}
+.fld label{font-size:12px;color:var(--muted);font-weight:600}
+.fld label .u{color:#94a3b8;font-weight:400}
+.fld input,.fld select,.fld textarea{padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit;background:#fff}
+.fld input:focus,.fld select:focus,.fld textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 2px rgba(29,78,137,.12)}
+.fld input[readonly]{background:#f1f5f9;color:var(--muted)}
+.fld .hint{font-size:10.5px;color:#94a3b8}
+
+/* КНОПКИ */
+.btn{padding:9px 18px;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s}
+.btn-pri{background:var(--blue);color:#fff}
+.btn-pri:hover{background:var(--blue-d)}
+.btn-acc{background:var(--acc);color:#fff}
+.btn-acc:hover{filter:brightness(.93)}
+.btn-ok{background:var(--ok);color:#fff}
+.btn-gh{background:#fff;color:var(--blue);border:1px solid var(--blue)}
+.btn-gh:hover{background:#eef3f9}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.navbtns{display:flex;justify-content:space-between;margin-top:20px;gap:10px}
+
+/* ЗАРЯДНАЯ КАРТА */
+.cc-tools{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:14px}
+.cc-tools .fld{min-width:110px}
+.cc-wrap{overflow:auto;border:1px solid var(--line);border-radius:8px;max-height:440px}
+table.cc{border-collapse:collapse;font-size:12px}
+table.cc th,table.cc td{border:1px solid var(--line);padding:0;text-align:center}
+table.cc th{background:var(--blue);color:#fff;padding:5px 7px;position:sticky;top:0;font-weight:600;min-width:46px}
+table.cc th.rh{left:0;z-index:3}
+table.cc td.rh{background:#eef3f9;font-weight:700;color:var(--blue);position:sticky;left:0;min-width:54px;padding:4px}
+table.cc input{width:52px;border:none;padding:5px 2px;text-align:center;font-size:12px;background:transparent}
+table.cc input:focus{outline:2px solid var(--blue);background:#fff7ec}
+table.cc td.has input{background:#eaf4ec;font-weight:600}
+
+/* ТАБЛИЦЫ РЕЗУЛЬТАТОВ */
+table.res{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:6px}
+table.res th,table.res td{border:1px solid var(--line);padding:6px 9px;text-align:left}
+table.res th{background:#eef3f9;color:var(--blue);font-weight:600}
+table.res td.v{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+table.res tr.sec td{background:var(--blue);color:#fff;font-weight:600}
+table.res tr.tot td{background:#fff4e6;font-weight:700}
+
+/* PDF */
+.pdf-drop{border:2px dashed var(--line);border-radius:10px;padding:30px;text-align:center;cursor:pointer;transition:.15s}
+.pdf-drop:hover,.pdf-drop.over{border-color:var(--blue);background:#f0f5fb}
+.pdf-drop .ic{font-size:34px}
+#pdfPreview{margin-top:14px;display:none}
+#pdfCanvas{max-width:100%;border:1px solid var(--line);border-radius:6px}
+.pdf-extract{margin-top:14px;display:none;background:#f0f5fb;border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+.tag{display:inline-block;background:#e2e8f0;border-radius:4px;padding:1px 7px;font-size:11px;margin:2px}
+
+/* ДОКУМЕНТ ПРОЕКТА */
+#docOut{background:#fff}
+.doc-page{background:#fff;border:1px solid var(--line);max-width:850px;margin:0 auto 18px;padding:46px 54px;font-family:'Times New Roman',serif;font-size:13.5px;line-height:1.5;color:#000}
+.doc-page h3{text-align:center;font-size:15px;margin:6px 0}
+.doc-page .center{text-align:center}
+.doc-page .right{text-align:right}
+.doc-page .b{font-weight:700}
+.doc-page p{margin:5px 0;text-align:justify}
+.doc-page table{border-collapse:collapse;width:100%;margin:8px 0;font-size:12px}
+.doc-page table td,.doc-page table th{border:1px solid #000;padding:3px 5px}
+.doc-page .sign{margin-top:18px}
+.doc-page .sign-row{display:flex;justify-content:space-between;margin-top:14px}
+.doc-cover{min-height:680px;display:flex;flex-direction:column}
+
+/* ПРОЧЕЕ */
+.notice{background:#fff8e6;border:1px solid #f0d98a;border-radius:7px;padding:10px 13px;font-size:12.5px;margin-bottom:14px}
+.ok-box{background:#e9f6ee;border:1px solid #a8d8ba;border-radius:7px;padding:10px 13px;font-size:12.5px;margin-bottom:14px;color:#176436}
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px}
+.chk{display:flex;align-items:center;gap:8px;background:#f1f5f9;padding:9px 12px;border-radius:7px;font-size:13px;font-weight:600}
+.chk input{width:18px;height:18px}
+.muted{color:var(--muted);font-size:12px}
+.sum-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:16px}
+.sum-card{background:linear-gradient(135deg,#fff,#f0f5fb);border:1px solid var(--line);border-radius:8px;padding:11px 13px}
+.sum-card .c-lbl{font-size:11px;color:var(--muted);font-weight:600}
+.sum-card .c-val{font-size:19px;font-weight:700;color:var(--blue);margin-top:2px}
+.sum-card .c-u{font-size:11px;color:var(--muted)}
+
+@media print{
+  body{background:#fff}
+  header,.steps,.navbtns,.toolbar,.no-print,.panel>h2,.panel>.desc{display:none!important}
+  .panel{border:none;box-shadow:none;padding:0}
+  .doc-page{border:none;margin:0 auto;page-break-after:always;max-width:100%;padding:30px 40px}
+  .doc-page:last-child{page-break-after:auto}
+  .wrap{padding:0;max-width:100%}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1><span class="logo">БВР</span> Универсальная форма расчёта буровзрывных работ</h1>
+    <div class="sub">Ввод параметров → зарядная карта → паспорт БВР → расчёт → формирование проекта массового взрыва → подтверждение и печать</div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="steps" id="steps">
+    <div class="step active" data-s="0"><div class="num">1</div><div class="lbl">Параметры</div></div>
+    <div class="step" data-s="1"><div class="num">2</div><div class="lbl">Зарядная карта</div></div>
+    <div class="step" data-s="2"><div class="num">3</div><div class="lbl">Паспорт БВР</div></div>
+    <div class="step" data-s="3"><div class="num">4</div><div class="lbl">Расчёт</div></div>
+    <div class="step" data-s="4"><div class="num">5</div><div class="lbl">Проект</div></div>
+    <div class="step" data-s="5"><div class="num">6</div><div class="lbl">Подтверждение</div></div>
+  </div>
+
+  <!-- ШАГ 1: ПАРАМЕТРЫ -->
+  <div class="panel active" id="p0">
+    <h2>Шаг 1. Исходные параметры</h2>
+    <div class="desc">Заполните общие сведения и параметры буровзрывных работ. Расчётные поля заполняются автоматически.</div>
+
+    <fieldset><legend>Общие сведения</legend>
+      <div class="grid">
+        <div class="fld"><label>Предприятие</label><input id="f_pred" value='АО "Поиск Золото"'></div>
+        <div class="fld"><label>Месторождение</label><input id="f_mest" value="Хаптагай-Хая"></div>
+        <div class="fld"><label>Блок</label><input id="f_blok" value="П-14; С1-14в"></div>
+        <div class="fld"><label>Прииск / подразделение</label><input id="f_prisk" value='Прииск "Эрел"'></div>
+        <div class="fld"><label>Населённый пункт</label><input id="f_np" value="п. Усть-Нера"></div>
+        <div class="fld"><label>Дата проведения взрыва</label><input id="f_data" type="date"></div>
+        <div class="fld"><label>Начало зарядки скважин</label><input id="f_zar1" value="07-00"></div>
+        <div class="fld"><label>Окончание зарядки скважин</label><input id="f_zar2" value="17-00"></div>
+        <div class="fld"><label>Время начала взрыва</label><input id="f_vz1" value="18-00"></div>
+        <div class="fld"><label>Время окончания взрыва</label><input id="f_vz2" value="18-25"></div>
+        <div class="fld"><label>Номер приказа о массовом взрыве</label><input id="f_prikaz" value="37-ВМ"></div>
+      </div>
+    </fieldset>
+
+    <fieldset><legend>Параметры буровзрывных работ</legend>
+      <div class="grid">
+        <div class="fld"><label>Расположение скважин</label>
+          <select id="f_raspol"><option>Шахматное</option><option>Прямоугольное</option></select></div>
+        <div class="fld"><label>Тип ВВ</label>
+          <select id="f_tipvv"><option value="0.82">АС пористая</option><option value="0.90">АС марки Б</option><option value="0">Другое (ввести плотность)</option></select></div>
+        <div class="fld"><label>Плотность ВВ в заряде <span class="u">г/см³</span></label><input id="f_plotvv" type="number" step="0.001" value="0.82"></div>
+        <div class="fld"><label>Вид дизельного топлива</label>
+          <select id="f_viddt"><option>Зимнее</option><option>Арктическое</option></select></div>
+        <div class="fld"><label>Усреднённая температура воздуха <span class="u">°C</span></label><input id="f_temp" readonly></div>
+        <div class="fld"><label>Плотность дизельного топлива <span class="u">кг/л</span></label><input id="f_plotdt" readonly></div>
+        <div class="fld"><label>Условный диаметр скважин <span class="u">м</span></label><input id="f_diam" type="number" step="0.001" value="0.215"></div>
+        <div class="fld"><label>Коэффициент использования скважины (КИС)</label><input id="f_kis" type="number" step="0.01" value="0.9"></div>
+        <div class="fld"><label>k работоспособности ВВ (игданит / 6-ЖВ)</label><input id="f_krab" type="number" step="0.01" value="1.13"></div>
+        <div class="fld"><label>Плотность пород на месторождении <span class="u">кг/м³</span></label><input id="f_plotpor" type="number" value="2250"></div>
+        <div class="fld"><label>k трещиноватости пород</label><input id="f_ktresh" type="number" step="0.1" value="1"></div>
+        <div class="fld"><label>Превышение верхней отметки участка <span class="u">м</span></label><input id="f_prev" type="number" step="0.1" value="0"></div>
+        <div class="fld"><label>Расстояние между скважинами <span class="u">м</span></label><input id="f_a" type="number" step="0.1" value="5.5"></div>
+        <div class="fld"><label>Расстояние между рядами <span class="u">м</span></label><input id="f_b" readonly></div>
+        <div class="fld"><label>Длина забойки <span class="u">м</span></label><input id="f_zaboi" type="number" step="0.1" value="2"></div>
+        <div class="fld"><label>Количество рядов <span class="u">шт</span></label><input id="f_ryad" type="number" value="6"></div>
+        <div class="fld"><label>Площадь взрываемого массива <span class="u">м²</span></label><input id="f_ploshad" type="number" value="8200"></div>
+        <div class="fld"><label>Масса боевика ПТ-П-2250 <span class="u">кг</span></label><input id="f_boevik" type="number" step="0.05" value="2.25"></div>
+        <div class="fld"><label>Доля дизтоплива в игданите</label><input id="f_doldt" type="number" step="0.001" value="0.055"></div>
+        <div class="fld"><label>Искра-П (42 мс) <span class="u">шт</span></label><input id="f_iskra42" type="number" value="20"></div>
+        <div class="fld"><label>Искра-В (Старт-600м) <span class="u">шт</span></label><input id="f_iskraV" type="number" value="1"></div>
+      </div>
+    </fieldset>
+
+    <fieldset><legend>Опасная зона и охраняемые объекты</legend>
+      <div class="grid">
+        <div class="fld"><label>Объекты в опасной зоне</label><input id="f_obj" value="ЛЭП-6кв"></div>
+        <div class="fld"><label>Мероприятия по защите объектов</label><input id="f_meri" value="Отключение и демонтаж линии электропередач ЛЭП-6кв"></div>
+        <div class="fld"><label>Опасная зона для оборудования <span class="u">м</span></label><input id="f_zoob" type="number" value="600"></div>
+        <div class="fld"><label>Опасная зона для сооружений <span class="u">м</span></label><input id="f_zoso" type="number" value="600"></div>
+      </div>
+    </fieldset>
+
+    <fieldset><legend>Ответственные лица (подписанты проекта)</legend>
+      <div class="grid">
+        <div class="fld"><label>Генеральный директор</label><input id="f_gendir" value="Каздобин А.В."></div>
+        <div class="fld"><label>Главный инженер</label><input id="f_gling" value="Парамонов В.И."></div>
+        <div class="fld"><label>Начальник участка БВР</label><input id="f_nachbvr" value="Сырбу Г.П."></div>
+        <div class="fld"><label>Главный геолог</label><input id="f_glgeo" value="Помалейко А.А."></div>
+        <div class="fld"><label>Главный маркшейдер</label><input id="f_glmark" value="Ефимов С.Ф."></div>
+        <div class="fld"><label>Начальник участка месторождения</label><input id="f_nachuch" value="Шмелёв С.В."></div>
+        <div class="fld"><label>Старший взрывник</label><input id="f_vzryvnik" value="Фурман А.С."></div>
+      </div>
+    </fieldset>
+    <div class="navbtns"><span></span><button class="btn btn-pri" onclick="go(1)">Далее: Зарядная карта →</button></div>
+  </div>
+
+  <!-- ШАГ 2: ЗАРЯДНАЯ КАРТА -->
+  <div class="panel" id="p1">
+    <h2>Шаг 2. Зарядная карта</h2>
+    <div class="desc">Проектная глубина скважин по рядам (п.м.). Введите глубину каждой скважины; пустая ячейка — скважина отсутствует.</div>
+    <div class="notice">Зарядная карта вводится вручную по данным паспорта БВР. Загруженный PDF обычно является чертежом, поэтому таблица глубин автоматически не распознаётся.</div>
+    <div class="cc-tools">
+      <div class="fld"><label>Рядов</label><input id="cc_rows" type="number" value="14" min="1" max="40"></div>
+      <div class="fld"><label>Скважин в ряду</label><input id="cc_cols" type="number" value="14" min="1" max="60"></div>
+      <button class="btn btn-gh" onclick="buildGrid()">Построить сетку</button>
+      <button class="btn btn-gh" onclick="fillGrid(8)">Заполнить всё «8»</button>
+      <button class="btn btn-gh" onclick="clearGrid()">Очистить</button>
+    </div>
+    <div class="cc-wrap"><table class="cc" id="ccTable"></table></div>
+    <div class="muted" id="ccStat" style="margin-top:8px"></div>
+    <div class="navbtns"><button class="btn btn-gh" onclick="go(0)">← Назад</button><button class="btn btn-pri" onclick="go(2)">Далее: Паспорт БВР →</button></div>
+  </div>
+
+  <!-- ШАГ 3: ПАСПОРТ -->
+  <div class="panel" id="p2">
+    <h2>Шаг 3. Паспорт буровзрывных работ (PDF)</h2>
+    <div class="desc">Загрузите паспорт БВР в формате PDF. Форма извлечёт из него доступные данные и приложит файл к проекту.</div>
+    <div class="pdf-drop" id="pdfDrop">
+      <div class="ic">📄</div>
+      <div style="font-weight:600;margin-top:6px">Перетащите PDF-файл паспорта сюда</div>
+      <div class="muted">или нажмите, чтобы выбрать файл</div>
+      <input type="file" id="pdfInput" accept="application/pdf" style="display:none">
+    </div>
+    <div class="pdf-extract" id="pdfExtract"></div>
+    <div id="pdfPreview">
+      <div class="muted" style="margin:10px 0 4px">Предпросмотр паспорта:</div>
+      <canvas id="pdfCanvas"></canvas>
+    </div>
+    <div class="navbtns"><button class="btn btn-gh" onclick="go(1)">← Назад</button><button class="btn btn-pri" onclick="go(3)">Далее: Расчёт →</button></div>
+  </div>
+
+  <!-- ШАГ 4: РАСЧЁТ -->
+  <div class="panel" id="p3">
+    <h2>Шаг 4. Результаты расчёта БВР</h2>
+    <div class="desc">Расчёт выполняется автоматически по введённым параметрам и зарядной карте.</div>
+    <div class="sum-cards" id="sumCards"></div>
+    <div id="resTables"></div>
+    <div class="navbtns"><button class="btn btn-gh" onclick="go(2)">← Назад</button><button class="btn btn-pri" onclick="go(4)">Далее: Сформировать проект →</button></div>
+  </div>
+
+  <!-- ШАГ 5: ПРОЕКТ -->
+  <div class="panel" id="p4">
+    <h2>Шаг 5. Проект массового взрыва</h2>
+    <div class="desc">Сформированный проект. Проверьте содержание перед подтверждением.</div>
+    <div class="toolbar no-print">
+      <button class="btn btn-pri" onclick="buildDoc()">⟳ Сформировать / обновить проект</button>
+    </div>
+    <div id="docOut"></div>
+    <div class="navbtns"><button class="btn btn-gh" onclick="go(3)">← Назад</button><button class="btn btn-pri" onclick="go(5)">Далее: Подтверждение →</button></div>
+  </div>
+
+  <!-- ШАГ 6: ПОДТВЕРЖДЕНИЕ -->
+  <div class="panel" id="p5">
+    <h2>Шаг 6. Подтверждение и печать</h2>
+    <div class="desc">Подтвердите проект, после чего станут доступны печать и экспорт.</div>
+    <div id="confState"></div>
+    <div class="chk no-print" style="margin-bottom:16px">
+      <input type="checkbox" id="confChk" onchange="onConfirm()">
+      <label for="confChk">Я проверил(а) параметры, зарядную карту и содержание проекта. Проект подтверждаю.</label>
+    </div>
+    <div class="toolbar no-print">
+      <button class="btn btn-ok" id="btnPrint" disabled onclick="printDoc()">🖨 Распечатать проект</button>
+      <button class="btn btn-acc" id="btnXlsx" disabled onclick="exportXlsx()">⬇ Экспорт в Excel (.xlsx)</button>
+      <button class="btn btn-acc" id="btnPdf" disabled onclick="printDoc()">⬇ Сохранить в PDF</button>
+    </div>
+    <div class="muted no-print">Сохранение в PDF: в окне печати выберите принтер «Сохранить как PDF».</div>
+    <div class="navbtns"><button class="btn btn-gh" onclick="go(4)">← Назад</button><span></span></div>
+  </div>
+</div>
+<script>
+/* ====================== СПРАВОЧНЫЕ ДАННЫЕ ====================== */
+const MONTHS=["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
+const TEMP=[-46,-42,-31,-14,3,13,15,10,2,-15,-35,-46];
+const DT_ZIM=[0.88785,0.88495,0.876975,0.86465,0.852325,0.845075,0.843625,0.84725,0.85305,0.865375,0.879875,0.88785];
+const DT_ARK=[0.878708,0.875756,0.867638,0.855092,0.842546,0.835166,0.83369,0.83738,0.843284,0.85583,0.87059,0.878708];
+let CC=[];          // зарядная карта [ряд][скв] = глубина
+let pdfMeta=null;   // {name, pages, textLen}
+let CALC=null;      // результаты расчёта
+let confirmed=false;
+
+/* ====================== УТИЛИТЫ ====================== */
+const $=id=>document.getElementById(id);
+const num=id=>{const v=parseFloat(($(id).value||'').toString().replace(',','.'));return isNaN(v)?0:v;};
+const txt=id=>($(id).value||'').trim();
+function fmt(x,d=2){if(x===null||x===undefined||isNaN(x))return '0';
+  return Number(x).toLocaleString('ru-RU',{minimumFractionDigits:d,maximumFractionDigits:d});}
+function fmt0(x){return fmt(x,0);}
+function ceilTo(x,s){return Math.ceil(x/s)*s;}
+
+/* ====================== НАВИГАЦИЯ ====================== */
+function go(s){
+  document.querySelectorAll('.panel').forEach((p,i)=>p.classList.toggle('active',i===s));
+  document.querySelectorAll('.step').forEach((st,i)=>{
+    st.classList.toggle('active',i===s);
+    st.classList.toggle('done',i<s);
+  });
+  window.scrollTo({top:0,behavior:'smooth'});
+  if(s===3){doCalc();renderResults();}
+  if(s===4){buildDoc();}
+  if(s===5){renderConfState();}
+}
+document.querySelectorAll('.step').forEach(st=>st.addEventListener('click',()=>go(+st.dataset.s)));
+
+/* ====================== СПРАВОЧНЫЕ ПОЛЯ ====================== */
+function refreshRefs(){
+  const d=$('f_data').value?new Date($('f_data').value):new Date();
+  const m=d.getMonth();
+  $('f_temp').value=TEMP[m];
+  const dt=$('f_viddt').value==='Зимнее'?DT_ZIM[m]:DT_ARK[m];
+  $('f_plotdt').value=dt.toFixed(4);
+  // расстояние между рядами
+  const a=num('f_a');
+  const b=$('f_raspol').value==='Прямоугольное'?a:a*0.917;
+  $('f_b').value=(Math.round(b*10)/10).toString();
+}
+['f_data','f_viddt','f_raspol','f_a'].forEach(id=>$(id).addEventListener('input',refreshRefs));
+$('f_tipvv').addEventListener('change',()=>{
+  const v=parseFloat($('f_tipvv').value);
+  if(v>0)$('f_plotvv').value=v;
+});
+
+/* ====================== ЗАРЯДНАЯ КАРТА ====================== */
+function buildGrid(){
+  const R=Math.max(1,Math.min(40,parseInt($('cc_rows').value)||14));
+  const C=Math.max(1,Math.min(60,parseInt($('cc_cols').value)||14));
+  const old=CC;
+  CC=[];
+  for(let r=0;r<R;r++){CC[r]=[];for(let c=0;c<C;c++){CC[r][c]=(old[r]&&old[r][c]!==undefined)?old[r][c]:'';}}
+  renderGrid();
+}
+function renderGrid(){
+  const t=$('ccTable');
+  let h='<tr><th class="rh">Ряд \\ Скв.</th>';
+  for(let c=0;c<CC[0].length;c++)h+=`<th>${c+1}</th>`;
+  h+='</tr>';
+  for(let r=0;r<CC.length;r++){
+    h+=`<tr><td class="rh">${r+1}</td>`;
+    for(let c=0;c<CC[r].length;c++){
+      const v=CC[r][c];
+      h+=`<td class="${v!==''&&parseFloat(v)>0?'has':''}"><input data-r="${r}" data-c="${c}" value="${v}"></td>`;
+    }
+    h+='</tr>';
+  }
+  t.innerHTML=h;
+  t.querySelectorAll('input').forEach(inp=>{
+    inp.addEventListener('input',e=>{
+      const r=+e.target.dataset.r,c=+e.target.dataset.c;
+      CC[r][c]=e.target.value.replace(',','.');
+      e.target.parentElement.classList.toggle('has',parseFloat(CC[r][c])>0);
+      updateCCStat();
+    });
+  });
+  updateCCStat();
+}
+function fillGrid(v){for(let r=0;r<CC.length;r++)for(let c=0;c<CC[r].length;c++)CC[r][c]=v;renderGrid();}
+function clearGrid(){for(let r=0;r<CC.length;r++)for(let c=0;c<CC[r].length;c++)CC[r][c]='';renderGrid();}
+function updateCCStat(){
+  let n=0,sum=0;
+  CC.forEach(row=>row.forEach(v=>{const d=parseFloat(v);if(d>0){n++;sum+=d;}}));
+  $('ccStat').textContent=`Скважин: ${n} шт · Общий объём бурения: ${fmt(sum,1)} п.м · Средняя глубина: ${n?fmt(sum/n,2):0} м`;
+}
+function getWells(){
+  const w=[];
+  CC.forEach((row,r)=>row.forEach((v,c)=>{const d=parseFloat(v);if(d>0)w.push({ryad:r+1,skv:c+1,d:d});}));
+  return w;
+}
+
+/* ====================== РАСЧЁТ БВР ====================== */
+function doCalc(){
+  const P={
+    plotvv:num('f_plotvv'), viddt:$('f_viddt').value, plotdt:num('f_plotdt'),
+    diam:num('f_diam'), kis:num('f_kis'), krab:num('f_krab'), plotpor:num('f_plotpor'),
+    ktresh:num('f_ktresh'), prev:num('f_prev'), a:num('f_a'), b:num('f_b'),
+    zaboi:num('f_zaboi'), ryad:num('f_ryad'), ploshad:num('f_ploshad'),
+    boevik:num('f_boevik'), doldt:num('f_doldt'), iskra42:num('f_iskra42'), iskraV:num('f_iskraV'),
+    raspol:$('f_raspol').value
+  };
+  const wells=getWells();
+  const n=wells.length;
+  // расход селитры на 1 п.м
+  const raskhSel=Math.round(Math.PI*P.diam*P.diam/4*P.plotvv*1000*100)/100;
+  let sumD=0,sumH=0,sumN=0,sumK=0,sumL=0,sumM=0,sumI=0;
+  wells.forEach(w=>{
+    w.N=Math.max(0,w.d-P.zaboi);          // высота колонки
+    w.zaboi=w.d>0?P.zaboi:0;
+    w.H=w.d*P.kis;                         // высота уступа
+    w.I=w.d-w.H;                           // перебур
+    w.K=Math.round(w.N*raskhSel*100)/100;  // АС, кг
+    w.L=w.K>0?w.K*P.doldt:0;               // ДТ, кг
+    w.M=P.plotdt>0?w.L/P.plotdt:0;         // ДТ, л
+    w.E=w.K+w.L;                            // гранулит
+    sumD+=w.d;sumH+=w.H;sumN+=w.N;sumK+=w.K;sumL+=w.L;sumM+=w.M;sumI+=w.I;
+  });
+  const srGlub=n?sumD/n:0;
+  const srHust=n?sumH/n:0;
+  const srPereb=n?sumI/n:0;
+  const srZar=n?sumN/n:0;
+  const srZaboi=n?(n*P.zaboi)/n:0;
+  const objemMassiva=P.ploshad*srHust;
+  wells.forEach(w=>{w.J=sumH>0?objemMassiva*w.H/sumH:0;});
+  // ВВ
+  const masAS=sumK, masDTkg=sumL, masPT=n*P.boevik, masDTl=sumM;
+  const obshMassa=masAS+masDTkg+masPT;
+  const srMassa=(n?masAS/n:0)+(n?masDTkg/n:0)+P.boevik;
+  // прочие параметры
+  const plotvvKg=P.plotvv*1000;
+  const lspp=Math.round(53*P.ktresh*P.diam*Math.sqrt((plotvvKg-P.krab)/P.plotpor)*10)/10;
+  const ksbl=Math.round(0.55/Math.cbrt(P.diam)*100)/100;
+  const sPerSkv=P.a*P.b;
+  const vyhodGM=P.ploshad>0&&objemMassiva>0?objemMassiva/Math.max(sumD,1e-9):0;
+  const udRaskhVV=objemMassiva>0?obshMassa/objemMassiva:0;
+  const udRaskhAS=objemMassiva>0?masAS/objemMassiva:0;
+  // средства инициирования
+  const iskraS=n, iskra42=Math.min(Math.max(Math.trunc(P.iskra42),0),n), iskra67=n-iskra42, iskraV=P.iskraV;
+  // безопасные расстояния
+  const nz=srGlub>0?srZar/srGlub:0;
+  const h9=Math.round(Math.sqrt(4*P.diam/(2*P.b))*100)/100;
+  const rRaz=1250*nz*h9;
+  const kr=rRaz>0?Math.round(0.5*(1+Math.sqrt(1+4*P.prev/rRaz))*100)/100:1;
+  const RRaz=rRaz*kr;
+  const rUVV=10*Math.cbrt(obshMassa);
+  const rUVVzd=ceilTo(rUVV*1.3,100);
+  const f30=12*1.5/Math.pow(2,0.25);
+  const qSeism=2*srMassa*0.9+1;
+  const rSeism=f30*Math.cbrt(qSeism);
+  const rRazV=1.4*rRaz;
+  const zonaLudi=Math.max(1000,ceilTo(RRaz,100));
+  const zonaObor=Math.max(num('f_zoob'),ceilTo(rRazV,100));
+  // перебур по формуле (для пояснит. записки)
+  const lPerForm=14*P.diam*Math.sqrt(P.plotvv*0.8);
+
+  CALC={P,wells,n,raskhSel,sumD,sumH,sumN,sumK,sumL,sumM,sumI,
+    srGlub,srHust,srPereb,srZar,srZaboi,objemMassiva,
+    masAS,masDTkg,masPT,masDTl,obshMassa,srMassa,
+    lspp,ksbl,sPerSkv,vyhodGM,udRaskhVV,udRaskhAS,
+    iskraS,iskra42,iskra67,iskraV,
+    nz,h9,rRaz,kr,RRaz,rUVV,rUVVzd,rSeism,qSeism,rRazV,zonaLudi,zonaObor,lPerForm};
+  return CALC;
+}
+
+/* ====================== ОТОБРАЖЕНИЕ РЕЗУЛЬТАТОВ ====================== */
+function renderResults(){
+  const c=CALC;
+  $('sumCards').innerHTML=[
+    ['Количество скважин',fmt0(c.n),'шт'],
+    ['Объём бурения',fmt(c.sumD,0),'п.м'],
+    ['Объём взрыва',fmt(c.objemMassiva/1000,1),'тыс.м³'],
+    ['Общая масса ВВ',fmt(c.obshMassa/1000,2),'тонн'],
+    ['Удельный расход ВВ',fmt(c.udRaskhVV,3),'кг/м³'],
+    ['Опасная зона (люди)',fmt0(c.zonaLudi),'м']
+  ].map(([l,v,u])=>`<div class="sum-card"><div class="c-lbl">${l}</div><div class="c-val">${v}</div><div class="c-u">${u}</div></div>`).join('');
+
+  const row=(p,u,v)=>`<tr><td>${p}</td><td>${u}</td><td class="v">${v}</td></tr>`;
+  const sec=t=>`<tr class="sec"><td colspan="3">${t}</td></tr>`;
+  let h='<table class="res"><tr><th style="width:62%">Параметр</th><th>Ед. изм.</th><th>Значение</th></tr>';
+  h+=sec('Параметры буровзрывных работ');
+  h+=row('Расход селитры на 1 п.м','кг/пог.м',fmt(c.raskhSel,2));
+  h+=row('Выход горной массы с 1 п.м','м³/пог.м',fmt(c.vyhodGM,2));
+  h+=row('Удельный расход ВВ','кг/м³',fmt(c.udRaskhVV,3));
+  h+=row('Удельный расход аммиачной селитры','кг/м³',fmt(c.udRaskhAS,3));
+  h+=row('ЛСПП (линия сопротивления по подошве)','м',fmt(c.lspp,1));
+  h+=row('Коэффициент сближения зарядов','',fmt(c.ksbl,2));
+  h+=row('Сеть бурения','м',fmt(c.P.a,1)+' × '+fmt(c.P.b,1));
+  h+=row('Площадь массива на 1 скважину','м²',fmt(c.sPerSkv,2));
+  h+=row('Объём взрываемого массива','м³',fmt(c.objemMassiva,1));
+  h+=row('Общий объём бурения','п.м',fmt(c.sumD,1));
+  h+=row('Средняя глубина скважин','м',fmt(c.srGlub,2));
+  h+=row('Средняя высота уступа','м',fmt(c.srHust,2));
+  h+=row('Средняя глубина перебура','м',fmt(c.srPereb,2));
+  h+=row('Средняя длина заряда','м',fmt(c.srZar,2));
+  h+=row('Средняя длина забойки','м',fmt(c.srZaboi,2));
+  h+=sec('Расчёт взрывчатых веществ');
+  h+=row('Аммиачная селитра (А.С.)','кг',fmt(c.masAS,2));
+  h+=row('Дизельное топливо (Д.Т.)','кг',fmt(c.masDTkg,2));
+  h+=row('Дизельное топливо (Д.Т.)','л',fmt(c.masDTl,2));
+  h+=row('ПТ-П-2250 (боевики)','кг',fmt(c.masPT,2));
+  h+=`<tr class="tot"><td>Общая масса заряда</td><td>кг</td><td class="v">${fmt(c.obshMassa,2)}</td></tr>`;
+  h+=row('Средняя масса заряда в 1 скважине','кг',fmt(c.srMassa,2));
+  h+=sec('Средства инициирования');
+  h+=row('Искра-С (500 мс)','шт',fmt0(c.iskraS));
+  h+=row('Искра-П (67 мс)','шт',fmt0(c.iskra67));
+  h+=row('Искра-П (42 мс)','шт',fmt0(c.iskra42));
+  h+=row('Искра-В (Старт-600м)','шт',fmt0(c.iskraV));
+  h+=sec('Безопасные расстояния');
+  h+=row('По разлёту кусков породы (rраз)','м',fmt(c.rRaz,1));
+  h+=row('Окончательное R разлёта','м',fmt(c.RRaz,1));
+  h+=row('По действию УВВ (для зданий)','м',fmt0(c.rUVVzd));
+  h+=row('По сейсмическому действию','м',fmt(c.rSeism,1));
+  h+=row('По высоте разлёта кусков','м',fmt(c.rRazV,1));
+  h+=`<tr class="tot"><td>Опасная зона для людей</td><td>м</td><td class="v">${fmt0(c.zonaLudi)}</td></tr>`;
+  h+=`<tr class="tot"><td>Опасная зона для оборудования</td><td>м</td><td class="v">${fmt0(c.zonaObor)}</td></tr>`;
+  h+='</table>';
+  $('resTables').innerHTML=h;
+}
+
+/* ====================== PDF: ЗАГРУЗКА И ИЗВЛЕЧЕНИЕ ====================== */
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+$('pdfDrop').addEventListener('click',()=>$('pdfInput').click());
+$('pdfInput').addEventListener('change',e=>{if(e.target.files[0])loadPdf(e.target.files[0]);});
+['dragover','dragenter'].forEach(ev=>$('pdfDrop').addEventListener(ev,e=>{e.preventDefault();$('pdfDrop').classList.add('over');}));
+['dragleave','drop'].forEach(ev=>$('pdfDrop').addEventListener(ev,e=>{e.preventDefault();$('pdfDrop').classList.remove('over');}));
+$('pdfDrop').addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f&&f.type==='application/pdf')loadPdf(f);});
+
+async function loadPdf(file){
+  const buf=await file.arrayBuffer();
+  const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+  const page=await pdf.getPage(1);
+  // предпросмотр
+  const vp=page.getViewport({scale:1.2});
+  const cv=$('pdfCanvas');cv.width=vp.width;cv.height=vp.height;
+  await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+  $('pdfPreview').style.display='block';
+  // извлечение текста
+  let allText='';
+  for(let i=1;i<=pdf.numPages;i++){
+    const pg=await pdf.getPage(i);
+    const tc=await pg.getTextContent();
+    allText+=tc.items.map(it=>it.str).join(' ')+' ';
+  }
+  pdfMeta={name:file.name,pages:pdf.numPages,text:allText};
+  extractFromPdf(allText,file.name,pdf.numPages);
+}
+function extractFromPdf(text,name,pages){
+  const box=$('pdfExtract');box.style.display='block';
+  const found=[];
+  const mGor=text.match(/[Гг]оризонт[.:\s]*\+?\s*([\d]+[.,]?\d*)/);
+  const mMest=text.match(/месторождени[ея][\s"«]*([А-ЯЁа-яё\- ]{3,40})/);
+  const mBlok=text.match(/блок[\s№]*([А-ЯЁ0-9\-;\s]{2,20})/i);
+  let h='<div class="b" style="margin-bottom:6px">📄 Паспорт загружен: '+name+' ('+pages+' стр.)</div>';
+  h+='<div class="muted">Извлечённые данные:</div><div style="margin-top:4px">';
+  if(mMest){h+='<span class="tag">Месторождение: '+mMest[1].trim()+'</span>';found.push('mest');}
+  if(mBlok){h+='<span class="tag">Блок: '+mBlok[1].trim()+'</span>';found.push('blok');}
+  if(mGor){h+='<span class="tag">Горизонт: +'+mGor[1]+'</span>';}
+  if(/перебур/i.test(text))h+='<span class="tag">Найдены сведения о перебуре</span>';
+  if(/забойк/i.test(text))h+='<span class="tag">Найдены сведения о забойке</span>';
+  if(!found.length)h+='<span class="tag">Текстовые данные таблиц не распознаны (паспорт — чертёж)</span>';
+  h+='</div>';
+  h+='<div class="muted" style="margin-top:8px">Паспорт приложен к проекту. Числовые значения зарядной карты проверьте вручную на Шаге 2 — таблицы на чертеже распознаются ограниченно.</div>';
+  box.innerHTML=h;
+}
+
+/* ====================== ПОДТВЕРЖДЕНИЕ И ПЕЧАТЬ ====================== */
+function renderConfState(){
+  doCalc();
+  $('confState').innerHTML=`<div class="ok-box">Проект сформирован. Скважин: <b>${fmt0(CALC.n)}</b>, объём взрыва: <b>${fmt(CALC.objemMassiva/1000,1)} тыс.м³</b>, общая масса ВВ: <b>${fmt(CALC.obshMassa/1000,2)} т</b>.${pdfMeta?' Паспорт БВР: <b>'+pdfMeta.name+'</b>.':' <b style=color:#b45309>Паспорт БВР не загружен.</b>'}</div>`;
+}
+function onConfirm(){
+  confirmed=$('confChk').checked;
+  ['btnPrint','btnXlsx','btnPdf'].forEach(id=>$(id).disabled=!confirmed);
+}
+function printDoc(){
+  if(!confirmed){alert('Сначала подтвердите проект.');return;}
+  buildDoc();
+  go(4);
+  setTimeout(()=>window.print(),300);
+}
+
+/* ====================== ФОРМИРОВАНИЕ ПРОЕКТА ====================== */
+function dateParts(){
+  const d=$('f_data').value?new Date($('f_data').value):new Date();
+  return {dd:d.getDate(),mm:MONTHS[d.getMonth()],yy:d.getFullYear()};
+}
+function depthGroups(){
+  const g={};
+  CALC.wells.forEach(w=>{
+    const k=w.d.toFixed(2);
+    if(!g[k])g[k]={d:w.d,n:0,sN:0,sK:0,sL:0,sZ:0};
+    g[k].n++;g[k].sN+=w.N;g[k].sK+=w.K;g[k].sL+=w.L;g[k].sZ+=w.zaboi;
+  });
+  return Object.values(g).sort((a,b)=>b.d-a.d);
+}
+function buildDoc(){
+  doCalc();
+  const c=CALC,P=c.P,dt=dateParts();
+  const pred=txt('f_pred'),mest=txt('f_mest'),blok=txt('f_blok'),prisk=txt('f_prisk'),np=txt('f_np');
+  const gling=txt('f_gling'),nachbvr=txt('f_nachbvr'),glgeo=txt('f_glgeo'),glmark=txt('f_glmark');
+  const nachuch=txt('f_nachuch'),vzr=txt('f_vzryvnik'),gendir=txt('f_gendir');
+  const D=`« ${dt.dd} » ${dt.mm} ${dt.yy} г.`;
+  const pages=[];
+
+  /* --- ОБЛОЖКА --- */
+  pages.push(`<div class="doc-page doc-cover">
+    <div class="center b" style="font-size:15px">АКЦИОНЕРНОЕ ОБЩЕСТВО</div>
+    <div class="center b" style="font-size:17px;margin-bottom:4px">«${pred.replace(/^АО\s*"?|"?$/g,'')}»</div>
+    <div style="flex:1"></div>
+    <div class="center b" style="font-size:26px;letter-spacing:3px">П Р О Е К Т</div>
+    <div class="center b" style="font-size:20px;letter-spacing:2px;margin:8px 0 18px">МАССОВОГО ВЗРЫВА</div>
+    <div class="center">месторождение: ${mest}</div>
+    <div class="center">Блок: ${blok}</div>
+    <div style="flex:1"></div>
+    <div class="center">${np}</div>
+    <div class="center">${dt.yy} г.</div>
+  </div>`);
+
+  /* --- АКТ --- */
+  pages.push(`<div class="doc-page">
+    <div class="b">${pred}</div>
+    <h3>А К Т</h3>
+    <div class="center">о готовности блока к заряжанию</div>
+    <p>Россыпное месторождение <b>${mest}</b>, блок <b>${blok}</b></p>
+    <p>${D} &nbsp;&nbsp; ${prisk}</p>
+    <p>Мы, нижеподписавшиеся, ответственный руководитель ВР ${nachbvr}, маркшейдер ________________,
+    составили настоящий акт о том, что блок <b>${blok}</b> полностью забурен и подготовлен к заряжанию
+    в следующих параметрах:</p>
+    <p>1. Средняя глубина скважин — <b>${fmt(c.srGlub,2)}</b> м</p>
+    <p>2. Площадь блока — <b>${fmt(P.ploshad/1000,1)}</b> тыс.м²</p>
+    <p>3. Количество скважин — <b>${fmt0(c.n)}</b> шт.</p>
+    <p>4. Объём торфов на взрыв — <b>${fmt(c.objemMassiva/1000,2)}</b> тыс.м³</p>
+    <p>Скважины пробурены в соответствии с проектом и очищены. Блок очищен от посторонних предметов
+    и подготовлен к производству взрывных работ.</p>
+    <div class="sign">
+      <div class="sign-row"><span>Ответственный руководитель ВР</span><span>_____________ / ${nachbvr} /</span></div>
+      <div class="sign-row"><span>Маркшейдер</span><span>_____________ / ________________ /</span></div>
+    </div>
+  </div>`);
+
+  /* --- ЛИСТ 2: ОЗНАКОМЛЕНИЕ --- */
+  let oz='<table><tr><th>№</th><th>Ф.И.О.</th><th>Профессия</th><th>Роспись</th></tr>';
+  for(let i=1;i<=17;i++)oz+=`<tr><td style="width:30px">${i}</td><td></td><td></td><td></td></tr>`;
+  oz+='</table>';
+  pages.push(`<div class="doc-page">
+    <p class="b">С проектом массового взрыва ознакомлены и проинструктированы:</p>
+    ${oz}
+  </div>`);
+
+  /* --- РАСПОРЯДОК --- */
+  pages.push(`<div class="doc-page">
+    <div class="right">УТВЕРЖДАЮ<br>Главный инженер ${pred}<br>_______________ ${gling}<br>${D}</div>
+    <h3>Р А С П О Р Я Д О К</h3>
+    <div class="center">проведения массового взрыва</div>
+    <p>Россыпное месторождение <b>${mest}</b>, блок <b>${blok}</b></p>
+    <p>1. Дата взрыва: ${D}</p>
+    <p>2. Место взрыва: месторождение ${mest}, ${prisk}</p>
+    <p>3. Время взрыва: с ${$('f_vz1').value} до ${$('f_vz2').value} по местному времени</p>
+    <p>4. Зарядка производится: ${D} с ${$('f_zar1').value} до ${$('f_zar2').value}</p>
+    <p>5. Способы инициирования зарядов, взрывной сети: неэлектрический</p>
+    <p>6. Общее количество взрываемых скважин: <b>${fmt0(c.n)}</b> шт.</p>
+    <p>7. Способ взрывания: инициирующий импульс от устройства Искра-С, с интервалом замедления 500 мс</p>
+    <p>8. Тип замедлителей: ИСКРА-П (42; 67) мс</p>
+    <p>9. Схема взрывания с указанием интервалов замедлений: согласно схеме (паспорт БВР)</p>
+    <p>10. Порядок монтажа взрывной сети: согласно проекту и схеме монтажа</p>
+    <p>11. Место расположения взрывной станции: согласно схеме</p>
+    <p>12. Опасная зона: для людей — ${fmt0(c.zonaLudi)} м; для оборудования — ${fmt0(c.zonaObor)} м;
+       для сооружений — ${fmt0(num('f_zoso'))} м.</p>
+    <p>13. Объекты, находящиеся в опасной зоне: ${txt('f_obj')}</p>
+    <p>14. Мероприятия по предотвращению повреждений охраняемых объектов: ${txt('f_meri')}</p>
+    <p>15. Оборудование отводится от ближайшей скважины: экскаваторы — на ${fmt0(c.zonaObor)} м,
+       буровые станки — на ${fmt0(c.zonaObor)} м.</p>
+    <p>16. Схема расстановки постов охраны опасной зоны прилагается.</p>
+    <p>17. Ответственным руководителем массового взрыва назначен: Начальник участка БВР ${nachbvr}</p>
+    <p>18. Подвозка взрывчатых материалов производится специализированным автомобилем.</p>
+    <p>19. Для очистки скважин перед заряжанием используется буровой станок СБШ-250.</p>
+  </div>`);
+
+  /* --- ТАБЛИЦА ПАРАМЕТРОВ --- */
+  const groups=depthGroups();
+  let tb=`<table><tr>
+    <th rowspan="2">№</th><th colspan="2">Глубина скв., м</th><th colspan="2">Кол-во скв.</th>
+    <th colspan="2">Расст. между скв., м</th><th colspan="2">Расст. между рядами, м</th>
+    <th colspan="2">Диаметр скв., мм</th><th colspan="2">Масса заряда в скв., кг</th>
+    <th colspan="2">Длина заряда, м</th><th colspan="2">Длина забойки, м</th></tr>
+    <tr>${'<th>Р</th><th>Ф</th>'.repeat(8)}</tr>`;
+  groups.forEach((g,i)=>{
+    const mass=(g.sK+g.sL)/g.n+P.boevik, lzar=g.sN/g.n, lzab=g.sZ/g.n;
+    const dia=Math.round(P.diam*1000);
+    tb+=`<tr><td>${i+1}</td><td>${fmt(g.d,1)}</td><td>${fmt(g.d,1)}</td>
+      <td>${g.n}</td><td>${g.n}</td><td>${fmt(P.a,1)}</td><td>${fmt(P.a,1)}</td>
+      <td>${fmt(P.b,1)}</td><td>${fmt(P.b,1)}</td><td>${dia}</td><td>${dia}</td>
+      <td>${fmt(mass,1)}</td><td>${fmt(mass,1)}</td><td>${fmt(lzar,1)}</td><td>${fmt(lzar,1)}</td>
+      <td>${fmt(lzab,1)}</td><td>${fmt(lzab,1)}</td></tr>`;
+  });
+  tb+='</table>';
+  pages.push(`<div class="doc-page">
+    <h3>ТАБЛИЦА</h3>
+    <div class="center">параметров взрывных работ</div>
+    <div class="center" style="font-size:12px">на россыпном месторождении ${mest}, блок ${blok}</div>
+    ${tb}
+    <p style="font-size:12px">Расчётный усреднённый вес заряда: боевик ПТ-П-2250 — ${fmt(P.boevik,2)} кг;
+    селитра/скв — ${fmt(c.n?c.masAS/c.n:0,2)} кг; дизтопливо — ${fmt(c.n?c.masDTkg/c.n:0,2)} кг;
+    итого — ${fmt(c.srMassa,2)} кг.</p>
+    <p style="font-size:12px">Общая масса ВМ: Гранулит М (АС+ДТ) — ${fmt(c.masAS+c.masDTkg,1)} кг;
+    ПТ-П-2250 — ${fmt(c.masPT,1)} кг; итого ВМ — ${fmt(c.obshMassa,1)} кг.</p>
+    <div class="sign-row"><span>Расчёт составил: Начальник участка БВР ${nachbvr}</span>
+      <span>Расчёт проверил: Главный инженер ${gling}</span></div>
+  </div>`);
+
+  /* --- ЛИСТ 5 --- */
+  pages.push(`<div class="doc-page">
+    <p>Инструктаж работников провёл: ${nachbvr}</p>
+    <p>1. Непосредственное руководство работой персонала при подготовке и проведении массового взрыва
+    осуществляет: Начальник участка БВР ${nachbvr}.</p>
+    <p>2. Ответственным за вывод людей с территории запретной и опасной зоны назначен: ${nachuch}.</p>
+    <p>3. Ответственным за заряжание и монтаж взрывной (электровзрывной) сети назначен: Старший взрывник ${vzr}.</p>
+    <p>4. Ответственным за вывод внутрикарьерного транспорта из запретной и опасной зоны назначен: ${nachuch}.</p>
+    <p>5. Ответственным за охрану запретной и опасной зон назначен: ${nachuch}.</p>
+    <p>6. Ответственным за отключение электроэнергии назначен: ${nachuch}.</p>
+    <p>7. Ответственным за подачу звуковых и световых сигналов назначен: Начальник участка БВР ${nachbvr}.</p>
+    <p>8. Ответственным за оповещение соседних предприятий и подразделений назначен: ${nachbvr}.</p>
+    <p>9. Подача сигналов проводится звуковой сиреной, установленной на зарядно-смесительной машине.</p>
+    <p>10. После выставления постов подаётся предупредительный сигнал — один продолжительный звуковой.</p>
+    <p>11. По указанию ответственного за вывод людей все люди, не занятые заряжанием, выводятся
+    в безопасное место согласно схеме.</p>
+    <p>12. Заряжание скважин осуществляет: Старший взрывник ${vzr}.</p>
+  </div>`);
+
+  /* --- ЛИСТ 7 --- */
+  pages.push(`<div class="doc-page">
+    <p>1. Укладку в заряды боевиков с капсюлем, монтаж взрывной сети осуществляет: Старший взрывник ${vzr},
+    под руководством ответственного руководителя ВР ${nachbvr}.</p>
+    <p>2. Боевой сигнал: два длинных звуковых.</p>
+    <p>3. После подачи боевого сигнала производится взрыв (неэлектрический способ взрывания).</p>
+    <p>4. Сигнал «отбой»: три коротких после осмотра места взрыва, после получения указания
+    от ответственного руководителя ВР ${nachbvr}.</p>
+    <p>5. Время проветривания и допуска людей к месту взрыва — не менее 30 мин.</p>
+    <p class="b">6. С распорядком проведения массового взрыва ознакомлены:</p>
+    <p>Ответственный руководитель ВР: ${nachbvr} _______________</p>
+    <p>Ответственный за вывод людей из опасной и запретной зон: ${nachuch} _______________</p>
+    <p>Ответственный за заряжание и монтаж взрывной сети: ${vzr} _______________</p>
+    <p>Ответственный за охрану запретной и опасной зон: ${nachuch} _______________</p>
+    <p>Ответственный за подачу сигналов: ${nachbvr} _______________</p>
+    <div class="sign-row"><span>Составил: Начальник участка БВР ${nachbvr}</span>
+      <span>Проверил: Главный инженер ${gling}</span></div>
+    <div class="right">${D}</div>
+  </div>`);
+
+  /* --- ЛИСТ 8: ПРИКАЗ --- */
+  pages.push(`<div class="doc-page">
+    <h3>П Р И К А З № ${txt('f_prikaz')}</h3>
+    <div class="sign-row"><span>от ${D}</span><span>${np}</span></div>
+    <p class="center b">О производстве массового взрыва ${D}</p>
+    <p>на месторождении ${mest}, блок № ${blok}.</p>
+    <p>Согласно графику производства массовых взрывов и проекту массового взрыва на россыпном
+    месторождении ${mest}, блок ${blok}, ${D} с ${$('f_vz1').value} до ${$('f_vz2').value}
+    будет произведён массовый взрыв.</p>
+    <p>В целях обеспечения безопасности работ и сохранности ВМ,</p>
+    <p class="b center">ПРИКАЗЫВАЮ:</p>
+    <p>1. Проект производства массового взрыва на блок ${blok}, разработанный на основании Типового проекта, утвердить.</p>
+    <p>2. Ответственным руководителем массового взрыва назначить: Начальник участка БВР ${nachbvr}.</p>
+    <p>3. Ответственность за вывод людей за пределы опасной зоны взрыва возложить на: ${nachuch}.</p>
+    <p>4. Ответственность за вывод техники за пределы опасной зоны возложить на: ${nachuch}.</p>
+    <p>5. Непосредственное руководство работой персонала при подготовке взрыва возложить на:
+    Начальник участка БВР ${nachbvr}.</p>
+    <p>6. Взрывником назначить: Старший взрывник ${vzr}.</p>
+    <p>7. Зарядку скважин произвести: ${D} с ${$('f_zar1').value} до ${$('f_zar2').value}.</p>
+    <p>8. Взрыв произвести: ${D} с ${$('f_vz1').value} до ${$('f_vz2').value}.</p>
+  </div>`);
+
+  /* --- ЛИСТ 9: продолжение приказа --- */
+  pages.push(`<div class="doc-page">
+    <p>9. Ответственность за отключение электроэнергии возложить на: ${nachuch}.</p>
+    <p>10. Оповещение ответственного руководителя взрывных работ, диспетчерской службы Зонального
+    центра и Якутского района провести в установленном порядке.</p>
+    <p>11. Ответственному руководителю ВR обеспечить проведение инструктажа персонала, привлекаемого
+    к массовому взрыву.</p>
+    <p>12. Все назначенные настоящим приказом ответственные лица на период подготовки и проведения
+    массового взрыва обязаны находиться на своих местах.</p>
+    <p>13. Контроль за исполнением настоящего приказа оставляю за собой.</p>
+    <div class="sign" style="margin-top:40px">
+      <div class="sign-row"><span>Главный инженер ${pred}</span><span>_______________ ${gling}</span></div>
+    </div>
+  </div>`);
+
+  /* --- ЛИСТ 11: РАСПОРЯЖЕНИЕ О ПОСТАХ --- */
+  let posts='';
+  for(let i=1;i<=5;i++)posts+=`<p>Пост №${i} — перекрывает подходы со стороны __________________________.<br>
+    Ответственный ________________ (подпись) ________________</p>`;
+  pages.push(`<div class="doc-page">
+    <h3>РАСПОРЯЖЕНИЕ</h3>
+    <div class="center">о расстановке постов оцепления по охране опасной зоны</div>
+    <div class="center">ВР на месторождении ${mest}, блок ${blok}</div>
+    <p>Взрыв ${D}, время взрыва с ${$('f_vz1').value} до ${$('f_vz2').value} часов.</p>
+    <p>${nachuch}, в целях обеспечения безопасности при производстве массового взрыва,
+    выставляет следующие посты оцепления:</p>
+    ${posts}
+    <p class="b">ВСЕМ ПОСТОВЫМ!</p>
+    <p>1. Бдительно наблюдать за местностью, самовольно не покидать пост.</p>
+    <p>2. Внимательно следить за подаваемыми сигналами:</p>
+    <p>ОДИН ДЛИННЫЙ звуковой сигнал — предупредительный;<br>
+    ДВА ДЛИННЫХ звуковых сигнала — боевой;<br>
+    ТРИ КОРОТКИХ звуковых сигнала — отбой.</p>
+    <div class="sign-row"><span>Ответственный за выставление постов: ${nachuch}</span><span>_____________</span></div>
+    <div class="sign-row"><span>Начальник участка БВР ${pred}: ${nachbvr}</span><span>_____________</span></div>
+  </div>`);
+
+  /* --- ЛИСТ 12-13: РАСЧЁТ ПАРАМЕТРОВ БВР --- */
+  pages.push(`<div class="doc-page">
+    <p class="center b">Расчёт параметров буровзрывных работ и потребности материалов</p>
+    <p>Вместимость погонного метра скважины (Р) определяется по справочным таблицам исходя из диаметра
+    скважины и плотности ВВ в заряде и составит: <b>${fmt(c.raskhSel,2)}</b> кг/пог.м.</p>
+    <p>Линия сопротивления по подошве уступа (ЛСПП) для вертикального заряда определяется по формуле:</p>
+    <p class="center">Wп = 53 · kт · dзар · √((ρвв·1000 − l) / ρпор)</p>
+    <p>где: kт — коэффициент местных геологических условий, kт = ${fmt(P.ktresh,1)};<br>
+    dзар — диаметр заряда, dзар = ${fmt(P.diam,3)} м;<br>
+    ρвв — плотность ВВ в заряде, ρвв = ${fmt(P.plotvv,2)} г/см³;<br>
+    l — коэффициент работоспособности ВВ (игданит) по отношению к ПТ-П-2250, l = ${fmt(P.krab,2)};<br>
+    ρпор — плотность породы, ρпор = ${fmt0(P.plotpor)} кг/м³.</p>
+    <p class="center">Wп = 53 · ${fmt(P.ktresh,1)} · ${fmt(P.diam,3)} · √((${fmt0(P.plotvv*1000)} − ${fmt(P.krab,2)}) / ${fmt0(P.plotpor)}) = <b>${fmt(c.lspp,1)}</b> м.</p>
+    <p>Расстояние между скважинными зарядами в ряду (a) и между рядами (b) определяются по формулам:</p>
+    <p class="center">a = Wп · m = ${fmt(c.lspp,1)} · ${fmt(c.ksbl,2)} ≈ <b>${fmt(P.a,1)}</b> м;
+    &nbsp; b = ${fmt(P.b,1)} м.</p>
+    <p>где m — коэффициент сближения зарядов, m = ${fmt(c.ksbl,2)}.</p>
+    <p>Число рядов скважинных зарядов принято в количестве <b>${fmt0(P.ryad)}</b> шт.
+    Расположение скважин — ${P.raspol.toLowerCase()}.</p>
+    <p>Величина перебура по опыту работ на аналогичных месторождениях принимается равной
+    <b>${fmt(c.srPereb,1)}</b> м (расчётная Lпер = 14 · dзар · √(ρвв · 0,8) = ${fmt(c.lPerForm,2)} м).</p>
+  </div>`);
+
+  pages.push(`<div class="doc-page">
+    <p>Глубина скважины устанавливается по формуле:</p>
+    <p class="center">Lс = H + Lпер = ${fmt(c.srHust,2)} + ${fmt(c.srPereb,2)} = <b>${fmt(c.srGlub,2)}</b> м.</p>
+    <p>Коэффициент использования скважины (Кис):</p>
+    <p class="center">Кис = H / Lс = ${fmt(c.srHust,2)} / ${fmt(c.srGlub,2)} = <b>${fmt(P.kis,2)}</b>.</p>
+    <p>Вес заряда в скважине (Qскв) принимается по фактическим данным каталога скважин:</p>
+    <p class="center">Qскв = Qас/скв + Qдт/скв + Qбоевика =
+    ${fmt(c.n?c.masAS/c.n:0,2)} + ${fmt(c.n?c.masDTkg/c.n:0,2)} + ${fmt(P.boevik,2)} =
+    <b>${fmt(c.srMassa,2)}</b> кг.</p>
+    <p>Длина заряда принимается по фактической длине колонки заряда:
+    Lзар = ΣLзар / nскв = <b>${fmt(c.srZar,2)}</b> м.</p>
+    <p>Длина забойки: Lзаб = ΣLзаб / nскв = <b>${fmt(c.srZaboi,2)}</b> м.</p>
+    <p>Площадь, приходящаяся на одну скважину: Sскв = a · b = ${fmt(P.a,1)} · ${fmt(P.b,1)} =
+    <b>${fmt(c.sPerSkv,2)}</b> м².</p>
+    <p>Выход горной массы по маркшейдерским данным:
+    Vгм/пог.м = Vмаркш / ΣLс = ${fmt(c.objemMassiva,0)} / ${fmt(c.sumD,0)} =
+    <b>${fmt(c.vyhodGM,2)}</b> м³/пог.м.</p>
+    <p>Объём взрываемой горной массы по маркшейдерским данным: Vгм = <b>${fmt(c.objemMassiva,1)}</b> м³.</p>
+  </div>`);
+
+  /* --- ЛИСТ 14: СУММАРНЫЙ РАСХОД ВВ + ОСНОВНЫЕ ПАРАМЕТРЫ --- */
+  const op=[
+    ['1','Площадь полигона','тыс.кв.м',fmt(P.ploshad/1000,1)],
+    ['2','Высота уступа','м',fmt(c.srHust,2)],
+    ['3','Объём взрыва','тыс.куб.м',fmt(c.objemMassiva/1000,2)],
+    ['4','Средняя глубина скважин','м',fmt(c.srGlub,2)],
+    ['5','в т.ч. перебур','м',fmt(c.srPereb,2)],
+    ['6','Диаметр скважины','мм',fmt0(P.diam*1000)],
+    ['7','Коэффициент использования скважины','',fmt(P.kis,2)],
+    ['8','ЛСПП','м',fmt(c.lspp,1)],
+    ['9','Расстояние между скважинами','м',fmt(P.a,1)],
+    ['10','Расстояние между рядами','м',fmt(P.b,1)],
+    ['11','Расположение скважин','',P.raspol],
+    ['12','Количество скважин','шт',fmt0(c.n)],
+    ['13','Объём бурения скважин','пог.м',fmt(c.sumD,0)],
+    ['14','Удельный расход Гранулита М','кг/пог.м',fmt(c.udRaskhVV,3)],
+    ['15','Длина заряда','м',fmt(c.srZar,2)],
+    ['16','Длина забойки','м',fmt(c.srZaboi,2)],
+    ['17','Величина заряда в скважине','кг',fmt(c.srMassa,2)],
+    ['18','Выход горной массы на 1 пог.м','куб.м',fmt(c.vyhodGM,2)],
+    ['19','Расход Гранулита М','т',fmt((c.masAS+c.masDTkg)/1000,3)],
+    ['20','Удельный расход АС на 1 куб.м ГМ','кг/куб.м',fmt(c.udRaskhAS,3)],
+    ['21','ПТ-П-2250','кг',fmt(c.masPT,2)],
+    ['22','Расход ИСКРА-С','шт',fmt0(c.iskraS)],
+    ['23','Расход Искра-П (67 мс)','шт',fmt0(c.iskra67)],
+    ['24','Расход Искра-П (42 мс)','шт',fmt0(c.iskra42)],
+    ['25','Расход Искра-В (Старт-600м)','шт',fmt0(c.iskraV)],
+    ['26','Расход аммиачной селитры на взрыв','т',fmt(c.masAS/1000,3)],
+    ['27','Удельный расход аммиачной селитры','кг/м3',fmt(c.udRaskhAS,3)]
+  ];
+  let opt='<table><tr><th>№</th><th>Параметр</th><th>Ед. изм.</th><th>Средний показатель</th></tr>';
+  op.forEach(r=>opt+=`<tr><td>${r[0]}</td><td style="text-align:left">${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`);
+  opt+='</table>';
+  pages.push(`<div class="doc-page">
+    <p class="b">Суммарный расход ВВ (игданита) на взрыв составит:</p>
+    <p>Qселитры = Nскв · Qскв = ${fmt0(c.n)} · ${fmt(c.n?c.masAS/c.n:0,2)} = ${fmt(c.masAS/1000,2)} т;</p>
+    <p>Qдт = Qселитры · ${fmt(P.doldt,3)} = ${fmt(c.masDTkg/1000,2)} т;</p>
+    <p>Mгранулита = ${fmt(c.masAS/1000,2)} + ${fmt(c.masDTkg/1000,2)} = ${fmt((c.masAS+c.masDTkg)/1000,2)} т.</p>
+    <p>Расход ПТ-П-2250 на боевики: ПТ-П-2250 = Mб · Nскв = ${fmt(P.boevik,2)} · ${fmt0(c.n)} = ${fmt(c.masPT,2)} кг.</p>
+    <p class="b">Расход средств инициирования: Искра-С — ${fmt0(c.iskraS)} шт; Искра-П (67 мс) — ${fmt0(c.iskra67)} шт;
+    Искра-П (42 мс) — ${fmt0(c.iskra42)} шт; Искра-В (Старт) — ${fmt0(c.iskraV)} шт.</p>
+    <p class="center b">Основные параметры буровзрывных работ</p>
+    ${opt}
+  </div>`);
+
+  /* --- ЛИСТ 15: РАЗЛЁТ КУСКОВ ПОРОДЫ --- */
+  pages.push(`<div class="doc-page">
+    <p class="center b">Расчёт безопасных расстояний при взрывных работах</p>
+    <p>Расчёт производится согласно главе XII ФНП «Правила безопасности при взрывных работах».</p>
+    <p class="b">Определение зон, опасных по разлёту отдельных кусков породы (грунта).</p>
+    <p>Расстояние, безопасное для людей при взрывании скважинных зарядов, определяется по формуле:</p>
+    <p class="center">rраз = 1250 · nз · √(4d / ((1+1)·b)), м</p>
+    <p>где: nзаб — коэффициент заполнения скважины забойкой, равный 1;<br>
+    d — диаметр взрываемой скважины, d = ${fmt(P.diam,3)} м;<br>
+    b — расстояние между рядами скважин, b = ${fmt(P.b,1)} м;<br>
+    nз — коэффициент заполнения скважин взрывчатым веществом.</p>
+    <p>Коэффициент заполнения скважин ВВ: nз = Lз / Lс = ${fmt(c.srZar,2)} / ${fmt(c.srGlub,2)} =
+    <b>${fmt(c.nz,3)}</b>.</p>
+    <p class="center">rраз = 1250 · ${fmt(c.nz,3)} · ${fmt(c.h9,2)} = <b>${fmt(c.rRaz,1)}</b> м.</p>
+    <p>При производстве взрывных работ на косогорах и в условиях пересечённой местности применяется
+    коэффициент рельефа Kр:</p>
+    <p class="center">Kр = 0,5 · (1 + √(1 + 4·H / rраз)) = ${fmt(c.kr,2)}</p>
+    <p>где H — превышение верхней отметки взрываемого участка над участком границы опасной зоны,
+    H = ${fmt(P.prev,1)} м.</p>
+    <p class="center">Rраз = rраз · Kр = ${fmt(c.rRaz,1)} · ${fmt(c.kr,2)} = <b>${fmt(c.RRaz,1)}</b> м.</p>
+  </div>`);
+
+  /* --- ЛИСТ 16: УВВ, СЕЙСМИКА, ВЫСОТА РАЗЛЁТА --- */
+  pages.push(`<div class="doc-page">
+    <p>Окончательное значение радиуса опасной зоны по разлёту отдельных кусков породы принимается
+    равным <b>${fmt0(Math.max(1000,ceilTo(c.RRaz,100)))}</b> м.</p>
+    <p class="b">Определение расстояний, безопасных по действию ударной воздушной волны (УВВ).</p>
+    <p>Расчёт безопасного расстояния по действию УВВ при взрыве заряда:</p>
+    <p class="center">Rв = 10 · Q^(1/3), м</p>
+    <p>где Q — максимальная масса заряда ВВ взрываемого блока, Q = ${fmt(c.obshMassa,0)} кг.</p>
+    <p class="center">Rв = 10 · ${fmt(c.obshMassa,0)}^(1/3) = <b>${fmt(c.rUVV,1)}</b> м.</p>
+    <p>Принимаем величину безопасного расстояния по действию УВВ для зданий и сооружений равной
+    <b>${fmt0(c.rUVVzd)}</b> м.</p>
+    <p class="b">Расчёт сейсмически безопасных расстояний.</p>
+    <p>Q — максимальная масса ВВ одновременно взрываемых зарядов:
+    Q = 2 · ${fmt(c.srMassa,1)} · 0,9 + 1 = ${fmt0(c.qSeism)} кг.</p>
+    <p class="center">rс = 15,14 · Q^(1/3) = 15,14 · ${fmt0(c.qSeism)}^(1/3) = <b>${fmt(c.rSeism,1)}</b> м.</p>
+    <p>Безопасное расстояние по сейсмическому действию принимаем равным
+    ${fmt0(ceilTo(c.rSeism,10))} м.</p>
+    <p class="b">Расчёт расстояний, безопасных по высоте разлёта отдельных кусков породы.</p>
+    <p class="center">rразл.в = 1,4 · rраз = 1,4 · ${fmt(c.rRaz,1)} = <b>${fmt(c.rRazV,1)}</b> м.</p>
+    <p>Расстояние, безопасное по высоте разлёта отдельных кусков породы, принимаем равным
+    <b>${fmt0(Math.max(500,ceilTo(c.rRazV,100)))}</b> м.</p>
+  </div>`);
+
+  /* --- ЛИСТ 17: ПЕРЕДАЧА ДЕТОНАЦИИ, ИТОГОВЫЕ ЗОНЫ --- */
+  pages.push(`<div class="doc-page">
+    <p class="b">Расчёт расстояния, исключающего передачу детонации при хранении ВМ,
+    доставленных к месту работ.</p>
+    <p>Расчёт расстояния, исключающего передачу детонации, выполняется согласно ФНП «Правила
+    безопасности при взрывных работах». Взрывчатые материалы при доставке к месту работ размещаются
+    раздельно с соблюдением расчётных расстояний, исключающих передачу детонации между активным
+    и пассивным зарядами.</p>
+    <p class="b">По результатам расчётов радиус опасной зоны на участке производства взрывных работ
+    принимается:</p>
+    <p>для людей — <b>${fmt0(c.zonaLudi)}</b> м;<br>
+    для оборудования — <b>${fmt0(c.zonaObor)}</b> м;<br>
+    для сооружений — <b>${fmt0(num('f_zoso'))}</b> м.</p>
+    <p>Принятые расстояния не менее расчётных по разлёту кусков породы, действию УВВ и сейсмическому
+    действию взрыва.</p>
+    <div class="sign-row" style="margin-top:30px">
+      <span>Расчёт составил: Начальник участка БВР ${nachbvr}</span>
+      <span>_____________</span></div>
+    <p style="font-size:11px;margin-top:24px">Проект массового взрыва со всеми графическими материалами
+    хранится в делах взрывного участка (цеха) до полной отработки взорванного блока
+    (ФНиП «Правила безопасности при взрывных работах»).</p>
+    ${pdfMeta?'<p style="font-size:11px">Приложение: паспорт буровзрывных работ — '+pdfMeta.name+'.</p>':''}
+  </div>`);
+
+  $('docOut').innerHTML=pages.join('');
+}
+
+/* ====================== ЭКСПОРТ В EXCEL ====================== */
+function exportXlsx(){
+  if(!confirmed){alert('Сначала подтвердите проект.');return;}
+  doCalc();
+  const c=CALC,P=c.P;
+  const wb=XLSX.utils.book_new();
+  // Лист «Параметры»
+  const par=[
+    ['ПРОЕКТ МАССОВОГО ВЗРЫВА — параметры расчёта БВР'],[],
+    ['Предприятие',txt('f_pred')],['Месторождение',txt('f_mest')],['Блок',txt('f_blok')],
+    ['Дата взрыва',$('f_data').value],[],
+    ['Параметр','Ед. изм.','Значение'],
+    ['Расположение скважин','',P.raspol],
+    ['Плотность ВВ в заряде','г/см³',P.plotvv],
+    ['Условный диаметр скважин','м',P.diam],
+    ['КИС','',P.kis],
+    ['Расход селитры на 1 п.м','кг/пог.м',c.raskhSel],
+    ['ЛСПП','м',c.lspp],
+    ['Коэффициент сближения зарядов','',c.ksbl],
+    ['Расстояние между скважинами','м',P.a],
+    ['Расстояние между рядами','м',P.b],
+    ['Количество рядов','шт',P.ryad],
+    ['Количество скважин','шт',c.n],
+    ['Площадь массива','м²',P.ploshad],
+    ['Объём взрываемого массива','м³',c.objemMassiva],
+    ['Общий объём бурения','п.м',c.sumD],
+    ['Средняя глубина скважин','м',c.srGlub],
+    ['Средняя высота уступа','м',c.srHust],
+    ['Средняя длина заряда','м',c.srZar],
+    ['Удельный расход ВВ','кг/м³',c.udRaskhVV],[],
+    ['РАСЧЁТ ВВ','Ед.','Значение'],
+    ['Аммиачная селитра','кг',c.masAS],
+    ['Дизтопливо','кг',c.masDTkg],
+    ['Дизтопливо','л',c.masDTl],
+    ['ПТ-П-2250','кг',c.masPT],
+    ['Общая масса заряда','кг',c.obshMassa],
+    ['Средняя масса заряда в скважине','кг',c.srMassa],[],
+    ['СРЕДСТВА ИНИЦИИРОВАНИЯ','Ед.','Значение'],
+    ['Искра-С (500 мс)','шт',c.iskraS],
+    ['Искра-П (67 мс)','шт',c.iskra67],
+    ['Искра-П (42 мс)','шт',c.iskra42],
+    ['Искра-В (Старт-600м)','шт',c.iskraV],[],
+    ['БЕЗОПАСНЫЕ РАССТОЯНИЯ','Ед.','Значение'],
+    ['Опасная зона для людей','м',c.zonaLudi],
+    ['Опасная зона для оборудования','м',c.zonaObor]
+  ];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(par),'Параметры');
+  // Лист «Каталог скважин»
+  const cat=[['№','Ряд-№ скв','Глубина, м','Высота уступа, м','Перебур, м','Высота колонки, м','Забойка, м','АС, кг','ДТ, кг','ДТ, л','Гранулит, кг','Vгм, м³']];
+  c.wells.forEach((w,i)=>cat.push([i+1,w.ryad+'-'+w.skv,w.d,r2(w.H),r2(w.I),r2(w.N),r2(w.zaboi),r2(w.K),r2(w.L),r2(w.M),r2(w.E),r2(w.J)]));
+  cat.push(['','ИТОГО',r2(c.sumD),r2(c.sumH),r2(c.sumI),r2(c.sumN),r2(c.n*P.zaboi),r2(c.masAS),r2(c.masDTkg),r2(c.masDTl),r2(c.masAS+c.masDTkg),r2(c.objemMassiva)]);
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(cat),'Каталог скважин');
+  // Лист «Зарядная карта»
+  const cc=[['Ряд \\ Скв.'].concat(CC[0].map((_,i)=>i+1))];
+  CC.forEach((row,r)=>cc.push([r+1].concat(row.map(v=>v===''?'':parseFloat(v)))));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(cc),'Зарядная карта');
+  // Лист «Таблица параметров»
+  const tp=[['№','Глубина, м','Кол-во скв.','Масса заряда, кг','Длина заряда, м','Длина забойки, м']];
+  depthGroups().forEach((g,i)=>tp.push([i+1,r2(g.d),g.n,r2((g.sK+g.sL)/g.n+P.boevik),r2(g.sN/g.n),r2(g.sZ/g.n)]));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(tp),'Таблица параметров');
+  const fn='Проект_БВР_'+txt('f_blok').replace(/[^а-яёА-ЯЁ0-9]+/gi,'_')+'.xlsx';
+  XLSX.writeFile(wb,fn);
+}
+function r2(x){return Math.round((x||0)*100)/100;}
+
+/* ====================== ИНИЦИАЛИЗАЦИЯ ====================== */
+function init(){
+  $('f_data').value=new Date().toISOString().slice(0,10);
+  refreshRefs();
+  buildGrid();
+}
+init();
+</script>
+</body>
+</html>
