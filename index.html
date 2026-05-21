@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Форма БВР</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{
+  --bg:var(--tg-theme-bg-color,#f4f6f9);
+  --text:var(--tg-theme-text-color,#18212f);
+  --hint:var(--tg-theme-hint-color,#667085);
+  --link:var(--tg-theme-link-color,#1d4e89);
+  --button:var(--tg-theme-button-color,#1d4e89);
+  --button-text:var(--tg-theme-button-text-color,#ffffff);
+  --section:var(--tg-theme-secondary-bg-color,#ffffff);
+  --line:rgba(91,110,132,.24);
+  --ok:#188a4d;
+  --warn:#b45309;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.42 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{position:sticky;top:0;z-index:10;background:var(--section);border-bottom:1px solid var(--line);padding:14px 14px 12px}
+h1{margin:0;font-size:18px;line-height:1.2}
+.sub{margin-top:4px;color:var(--hint);font-size:12px}
+main{padding:12px 12px 96px}
+section{background:var(--section);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px}
+h2{margin:0 0 10px;color:var(--link);font-size:15px}
+h3{margin:14px 0 8px;font-size:13px;color:var(--hint);text-transform:uppercase;letter-spacing:.04em}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.fld{display:flex;flex-direction:column;gap:4px}
+label{font-size:12px;color:var(--hint);font-weight:650}
+input,select,textarea{width:100%;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font:inherit;padding:9px 10px}
+input:focus,select:focus,textarea:focus{outline:2px solid color-mix(in srgb,var(--link),transparent 76%);border-color:var(--link)}
+textarea{min-height:112px;resize:vertical}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:end}
+.row .fld{min-width:96px;flex:0 0 auto}
+button{border:0;border-radius:8px;background:var(--button);color:var(--button-text);font:inherit;font-weight:700;padding:10px 13px}
+button.ghost{background:transparent;color:var(--link);border:1px solid var(--line)}
+button.warn{background:var(--warn)}
+.notice{background:color-mix(in srgb,var(--link),transparent 91%);border:1px solid var(--line);border-radius:8px;padding:10px 11px;color:var(--hint);font-size:12.5px;margin-bottom:10px}
+.status{border-radius:8px;padding:10px 11px;margin-top:10px;font-size:12.5px}
+.status.ok{background:rgba(24,138,77,.12);color:var(--ok)}
+.status.warn{background:rgba(180,83,9,.13);color:var(--warn)}
+.cc-wrap{overflow:auto;border:1px solid var(--line);border-radius:9px;max-height:420px;background:var(--section)}
+table{border-collapse:collapse;font-size:12px}
+th,td{border:1px solid var(--line);text-align:center}
+th{position:sticky;top:0;background:var(--button);color:var(--button-text);z-index:2;min-width:42px;padding:5px}
+th.rh,td.rh{position:sticky;left:0;z-index:3;min-width:48px}
+td.rh{background:var(--section);font-weight:700;color:var(--link)}
+td input{width:48px;border:0;border-radius:0;background:transparent;text-align:center;padding:6px 2px}
+td.has input{background:rgba(24,138,77,.13);font-weight:700}
+.summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.metric{border:1px solid var(--line);border-radius:8px;padding:10px;background:var(--bg)}
+.metric .k{font-size:11px;color:var(--hint)}
+.metric .v{font-size:18px;font-weight:800;color:var(--link);margin-top:2px}
+.full{grid-column:1/-1}
+.submitbar{position:fixed;left:0;right:0;bottom:0;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:var(--section);border-top:1px solid var(--line)}
+.submitbar button{width:100%;font-size:15px;padding:13px}
+.small{font-size:12px;color:var(--hint)}
+@media (max-width:520px){
+  .grid{grid-template-columns:1fr}
+  .summary{grid-template-columns:1fr}
+  section{border-radius:0;margin-left:-12px;margin-right:-12px;border-left:0;border-right:0}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>Форма расчёта БВР</h1>
+  <div class="sub">Заполните параметры и зарядную карту, затем передайте данные в бот для формирования проекта.</div>
+</header>
+
+<main>
+  <section>
+    <h2>Общие сведения</h2>
+    <div class="grid">
+      <div class="fld"><label>Предприятие</label><input id="f_pred"></div>
+      <div class="fld"><label>Месторождение</label><input id="f_mest"></div>
+      <div class="fld"><label>Блок</label><input id="f_blok"></div>
+      <div class="fld"><label>Прииск / подразделение</label><input id="f_prisk"></div>
+      <div class="fld"><label>Населённый пункт</label><input id="f_np"></div>
+      <div class="fld"><label>Дата проведения взрыва</label><input id="f_data" type="date"></div>
+      <div class="fld"><label>Начало зарядки</label><input id="f_zar1"></div>
+      <div class="fld"><label>Окончание зарядки</label><input id="f_zar2"></div>
+      <div class="fld"><label>Начало взрыва</label><input id="f_vz1"></div>
+      <div class="fld"><label>Окончание взрыва</label><input id="f_vz2"></div>
+      <div class="fld"><label>Номер приказа</label><input id="f_prikaz"></div>
+    </div>
+
+    <h3>Ответственные лица</h3>
+    <div class="grid">
+      <div class="fld"><label>Генеральный директор</label><input id="f_gendir"></div>
+      <div class="fld"><label>Главный инженер</label><input id="f_gling"></div>
+      <div class="fld"><label>Начальник участка БВР</label><input id="f_nachbvr"></div>
+      <div class="fld"><label>Главный геолог</label><input id="f_glgeo"></div>
+      <div class="fld"><label>Главный маркшейдер</label><input id="f_glmark"></div>
+      <div class="fld"><label>Начальник участка месторождения</label><input id="f_nachuch"></div>
+      <div class="fld"><label>Старший взрывник</label><input id="f_vzryvnik"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Параметры БВР</h2>
+    <div class="grid">
+      <div class="fld"><label>Расположение скважин</label><select id="f_raspol"><option>Шахматное</option><option>Прямоугольное</option></select></div>
+      <div class="fld"><label>Плотность ВВ, г/см3</label><input id="f_plotvv" type="number" step="0.001"></div>
+      <div class="fld"><label>Вид дизельного топлива</label><select id="f_viddt"><option>Зимнее</option><option>Арктическое</option></select></div>
+      <div class="fld"><label>Диаметр скважин, м</label><input id="f_diam" type="number" step="0.001"></div>
+      <div class="fld"><label>КИС</label><input id="f_kis" type="number" step="0.01"></div>
+      <div class="fld"><label>k работоспособности ВВ</label><input id="f_krab" type="number" step="0.01"></div>
+      <div class="fld"><label>Плотность пород, кг/м3</label><input id="f_plotpor" type="number"></div>
+      <div class="fld"><label>k трещиноватости</label><input id="f_ktresh" type="number" step="0.1"></div>
+      <div class="fld"><label>Превышение отметки, м</label><input id="f_prev" type="number" step="0.1"></div>
+      <div class="fld"><label>Расстояние между скважинами, м</label><input id="f_a" type="number" step="0.1"></div>
+      <div class="fld"><label>Длина забойки, м</label><input id="f_zaboi" type="number" step="0.1"></div>
+      <div class="fld"><label>Количество рядов, шт</label><input id="f_ryad" type="number"></div>
+      <div class="fld"><label>Площадь массива, м2</label><input id="f_ploshad" type="number"></div>
+      <div class="fld"><label>Масса боевика ПТ-П-2250, кг</label><input id="f_boevik" type="number" step="0.05"></div>
+      <div class="fld"><label>Доля ДТ в игданите</label><input id="f_doldt" type="number" step="0.001"></div>
+      <div class="fld"><label>Искра-П 42 мс, шт</label><input id="f_iskra42" type="number"></div>
+      <div class="fld"><label>Искра-В, шт</label><input id="f_iskraV" type="number"></div>
+      <div class="fld"><label>Опасная зона для оборудования, м</label><input id="f_zoob" type="number"></div>
+      <div class="fld"><label>Опасная зона для сооружений, м</label><input id="f_zoso" type="number"></div>
+      <div class="fld"><label>Объекты в опасной зоне</label><input id="f_obj"></div>
+      <div class="fld"><label>Мероприятия защиты объектов</label><input id="f_meri"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Зарядная карта</h2>
+    <div class="notice">Введите проектную глубину скважин. Пустая ячейка или 0 означает отсутствие скважины. Паспорт PDF лучше загрузить в бот после отправки формы.</div>
+    <div class="row">
+      <div class="fld"><label>Рядов</label><input id="cc_rows" type="number" min="1" max="40" value="14"></div>
+      <div class="fld"><label>Скважин</label><input id="cc_cols" type="number" min="1" max="60" value="14"></div>
+      <button type="button" class="ghost" id="gridBtn">Построить</button>
+      <button type="button" class="ghost" id="fillBtn">Заполнить 8</button>
+      <button type="button" class="ghost warn" id="clearBtn">Очистить</button>
+    </div>
+    <div class="cc-wrap" style="margin-top:10px"><table id="ccTable"></table></div>
+    <div class="small" id="ccStat" style="margin-top:8px"></div>
+    <h3>Быстрый ввод текстом</h3>
+    <textarea id="cardText" placeholder="Каждая строка — ряд, глубины через пробел. Например:&#10;0 4 4 4 4 0&#10;8 8 8 8 8 8"></textarea>
+    <div class="row" style="margin-top:8px">
+      <button type="button" class="ghost" id="pasteBtn">Загрузить текст в карту</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Проверка перед отправкой</h2>
+    <div class="summary" id="summary"></div>
+    <div id="payloadStatus" class="status ok"></div>
+  </section>
+</main>
+
+<div class="submitbar">
+  <button id="sendBtn" type="button">Передать данные в бот</button>
+</div>
+
+<script>
+const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+if (tg) {
+  tg.ready();
+  tg.expand();
+  tg.MainButton.setText('Передать данные в бот');
+  tg.MainButton.onClick(submitForm);
+  tg.MainButton.show();
+}
+
+const DEFAULTS = {
+  pred:'АО "Поиск Золото"', mest:'Хаптагай-Хая', blok:'П-14; С1-14в',
+  prisk:'Прииск "Эрел"', np:'п. Усть-Нера', data:'',
+  zar1:'07-00', zar2:'17-00', vz1:'18-00', vz2:'18-25', prikaz:'37-ВМ',
+  raspol:'Шахматное', plotvv:0.82, viddt:'Зимнее', diam:0.215, kis:0.9,
+  krab:1.13, plotpor:2250, ktresh:1, prev:0, a:5.5, zaboi:2, ryad:6,
+  ploshad:8200, boevik:2.25, doldt:0.055, iskra42:20, iskraV:1,
+  zoob:600, zoso:600, obj:'ЛЭП-6кв',
+  meri:'Отключение и демонтаж линии электропередач ЛЭП-6кв',
+  gendir:'Каздобин А.В.', gling:'Парамонов В.И.', nachbvr:'Сырбу Г.П.',
+  glgeo:'Помалейко А.А.', glmark:'Ефимов С.Ф.', nachuch:'Шмелёв С.В.',
+  vzryvnik:'Фурман А.С.'
+};
+const SHORT = {
+  pred:'p', mest:'m', blok:'b', prisk:'pr', np:'np', data:'d',
+  zar1:'z1', zar2:'z2', vz1:'v1', vz2:'v2', prikaz:'pk',
+  raspol:'rp', plotvv:'pv', viddt:'vd', diam:'dm', kis:'ks', krab:'kr',
+  plotpor:'pp', ktresh:'kt', prev:'pe', a:'a', zaboi:'zb', ryad:'rd',
+  ploshad:'pl', boevik:'bo', doldt:'dd', iskra42:'i42', iskraV:'iv',
+  zoob:'zo', zoso:'zs', obj:'ob', meri:'me', gendir:'gd', gling:'gi',
+  nachbvr:'nb', glgeo:'gg', glmark:'gm', nachuch:'nu', vzryvnik:'vr'
+};
+const NUMERIC = new Set(['plotvv','diam','kis','krab','plotpor','ktresh','prev','a','zaboi','ryad','ploshad','boevik','doldt','iskra42','iskraV','zoob','zoso']);
+let CC = [];
+
+const $ = id => document.getElementById(id);
+const fmt = (x,d=2) => Number(x||0).toLocaleString('ru-RU',{minimumFractionDigits:d,maximumFractionDigits:d});
+const todayISO = () => {
+  const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0,10);
+};
+const norm = v => {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return '0';
+  return Number.isInteger(n) ? String(n) : String(Math.round(n * 100) / 100);
+};
+
+function setDefaults(){
+  DEFAULTS.data = todayISO();
+  Object.keys(DEFAULTS).forEach(k => {
+    const el = $('f_' + k);
+    if (el) el.value = DEFAULTS[k];
+  });
+}
+
+function valueOf(k){
+  const el = $('f_' + k);
+  if (!el) return DEFAULTS[k];
+  if (NUMERIC.has(k)) {
+    const n = parseFloat(String(el.value).replace(',','.'));
+    return Number.isFinite(n) ? n : 0;
+  }
+  return String(el.value || '').trim();
+}
+
+function buildGrid(){
+  const rows = Math.max(1, Math.min(40, parseInt($('cc_rows').value, 10) || 14));
+  const cols = Math.max(1, Math.min(60, parseInt($('cc_cols').value, 10) || 14));
+  const old = CC;
+  CC = Array.from({length: rows}, (_, r) =>
+    Array.from({length: cols}, (_, c) => old[r] && old[r][c] !== undefined ? old[r][c] : '')
+  );
+  renderGrid();
+}
+
+function renderGrid(){
+  let html = '<tr><th class="rh">Ряд</th>';
+  for (let c = 0; c < CC[0].length; c++) html += `<th>${c + 1}</th>`;
+  html += '</tr>';
+  CC.forEach((row, r) => {
+    html += `<tr><td class="rh">${r + 1}</td>`;
+    row.forEach((v, c) => {
+      html += `<td class="${parseFloat(v)>0?'has':''}"><input inputmode="decimal" data-r="${r}" data-c="${c}" value="${v}"></td>`;
+    });
+    html += '</tr>';
+  });
+  $('ccTable').innerHTML = html;
+  $('ccTable').querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('input', e => {
+      const r = +e.target.dataset.r;
+      const c = +e.target.dataset.c;
+      CC[r][c] = e.target.value.replace(',', '.');
+      e.target.parentElement.classList.toggle('has', parseFloat(CC[r][c]) > 0);
+      updateSummary();
+    });
+  });
+  updateSummary();
+}
+
+function fillGrid(v){
+  CC.forEach(row => row.forEach((_, c) => row[c] = v));
+  renderGrid();
+}
+
+function clearGrid(){
+  CC.forEach(row => row.forEach((_, c) => row[c] = ''));
+  renderGrid();
+}
+
+function loadTextCard(){
+  const lines = $('cardText').value.trim().split(/\n+/).filter(Boolean);
+  if (!lines.length) return;
+  const rows = lines.map(line => line.replace(/;/g, ' ').trim().split(/\s+/));
+  const maxCols = Math.max(...rows.map(r => r.length));
+  $('cc_rows').value = Math.max(rows.length, 1);
+  $('cc_cols').value = Math.max(maxCols, 1);
+  CC = rows.map(row => Array.from({length:maxCols}, (_, i) => {
+    const n = parseFloat(String(row[i] || '').replace(',', '.'));
+    return n > 0 ? String(n) : '';
+  }));
+  renderGrid();
+}
+
+function cardBounds(){
+  let maxR = 0, maxC = 0, n = 0, sum = 0;
+  CC.forEach((row, r) => row.forEach((v, c) => {
+    const d = parseFloat(v);
+    if (d > 0) {
+      n += 1; sum += d; maxR = Math.max(maxR, r + 1); maxC = Math.max(maxC, c + 1);
+    }
+  }));
+  return {maxR, maxC, n, sum};
+}
+
+function compactCard(){
+  const b = cardBounds();
+  if (!b.n) return '';
+  return CC.slice(0, b.maxR).map(row =>
+    row.slice(0, b.maxC).map(v => {
+      const d = parseFloat(v);
+      return d > 0 ? norm(d) : '0';
+    }).join(' ')
+  ).join('\n');
+}
+
+function calcPreview(){
+  const b = cardBounds();
+  const kis = valueOf('kis');
+  const ploshad = valueOf('ploshad');
+  const zaboi = valueOf('zaboi');
+  const diam = valueOf('diam');
+  const plotvv = valueOf('plotvv');
+  const boevik = valueOf('boevik');
+  const doldt = valueOf('doldt');
+  const avg = b.n ? b.sum / b.n : 0;
+  const avgChargeLen = Math.max(0, avg - zaboi);
+  const volume = ploshad * avg * kis;
+  const saltPerM = Math.PI * diam * diam / 4 * plotvv * 1000;
+  const salt = b.n * avgChargeLen * saltPerM;
+  const fuel = salt * doldt;
+  const total = salt + fuel + b.n * boevik;
+  return {n:b.n, sum:b.sum, avg, volume, total};
+}
+
+function makePayload(){
+  const over = {};
+  Object.keys(SHORT).forEach(k => {
+    const v = valueOf(k);
+    if (k === 'data' || String(v) !== String(DEFAULTS[k])) over[SHORT[k]] = v;
+  });
+  return {
+    type: 'bvr_form',
+    v: 1,
+    over,
+    card: compactCard()
+  };
+}
+
+function updateSummary(){
+  const c = calcPreview();
+  $('ccStat').textContent = `Скважин: ${c.n} шт · Объём бурения: ${fmt(c.sum,1)} п.м · Средняя глубина: ${fmt(c.avg,2)} м`;
+  $('summary').innerHTML = [
+    ['Скважин', c.n, 'шт'],
+    ['Бурение', fmt(c.sum,1), 'п.м'],
+    ['Объём взрыва', fmt(c.volume/1000,1), 'тыс.м3'],
+    ['Масса ВВ', fmt(c.total/1000,2), 'т']
+  ].map(([k,v,u]) => `<div class="metric"><div class="k">${k}</div><div class="v">${v}</div><div class="k">${u}</div></div>`).join('');
+  const payload = JSON.stringify(makePayload());
+  const status = $('payloadStatus');
+  if (!c.n) {
+    status.className = 'status warn';
+    status.textContent = 'Заполните хотя бы одну скважину.';
+  } else if (payload.length > 3900) {
+    status.className = 'status warn';
+    status.textContent = `Слишком большой объём данных для Telegram (${payload.length} символов). Уменьшите размер карты или введите карту в чатовый режим.`;
+  } else {
+    status.className = 'status ok';
+    status.textContent = `Данные готовы к отправке. Размер пакета: ${payload.length} символов.`;
+  }
+}
+
+function submitForm(){
+  const payload = JSON.stringify(makePayload());
+  const c = calcPreview();
+  if (!c.n) {
+    alert('Заполните хотя бы одну скважину в зарядной карте.');
+    return;
+  }
+  if (payload.length > 3900) {
+    alert('Слишком большой объём данных для передачи в Telegram. Уменьшите карту или используйте чатовый ввод.');
+    return;
+  }
+  if (tg) {
+    tg.sendData(payload);
+  } else {
+    navigator.clipboard && navigator.clipboard.writeText(payload);
+    alert('Это режим обычного браузера. JSON с данными скопирован в буфер обмена.');
+  }
+}
+
+document.getElementById('gridBtn').addEventListener('click', buildGrid);
+document.getElementById('fillBtn').addEventListener('click', () => fillGrid(8));
+document.getElementById('clearBtn').addEventListener('click', clearGrid);
+document.getElementById('pasteBtn').addEventListener('click', loadTextCard);
+document.getElementById('sendBtn').addEventListener('click', submitForm);
+document.querySelectorAll('input,select,textarea').forEach(el => el.addEventListener('input', updateSummary));
+
+setDefaults();
+buildGrid();
+</script>
+</body>
+</html>
